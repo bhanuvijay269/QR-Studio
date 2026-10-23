@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Text QR Studio</title>
+<style>
+:root{color-scheme:light;--ink:#172033;--muted:#64748b;--line:#dbe2ea;--panel:#fff;--bg:#f3f6fa;--accent:#2563eb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:22px 18px 16px;background:#111827;color:white}header h1{font-size:23px;margin:0 0 5px}header p{margin:0;color:#cbd5e1;font-size:14px}
+main{max-width:760px;margin:auto;padding:16px;display:grid;gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 8px #0f172a08}
+h2{font-size:17px;margin:0 0 12px}label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+input,textarea,select,button{font:inherit}input[type=text],textarea,select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px;background:white;color:var(--ink)}textarea{min-height:94px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.colors{display:grid;grid-template-columns:1fr 1fr;gap:12px}.colorfield{display:flex;align-items:center;gap:9px;border:1px solid var(--line);padding:7px;border-radius:10px}.colorfield input{width:42px;height:36px;padding:0;border:0;background:none}.colorfield span{font-size:13px;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent)}.check{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:12px}.check label{margin:0;font-weight:500}
+.preview-wrap{display:flex;justify-content:center;padding:12px}.preview{width:min(100%,360px);padding:18px 16px 14px;text-align:center;border:1px solid var(--line);border-radius:14px;overflow-wrap:anywhere}
+#qr{display:flex;justify-content:center;align-items:center;min-height:190px}#qr canvas,#qr img{max-width:100%;height:auto!important;image-rendering:pixelated}
+#tagPreview{font-weight:800;font-size:22px;line-height:1.2;margin:14px 0 0;overflow-wrap:anywhere}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}button{border:0;border-radius:11px;padding:12px 10px;font-weight:700;cursor:pointer;background:#e2e8f0;color:#172033}button.primary{background:var(--accent);color:white}button:disabled{opacity:.5;cursor:not-allowed}.full{grid-column:1/-1}.status{font-size:13px;color:var(--muted);line-height:1.45;margin:10px 0 0}.notice{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;font-size:13px;line-height:1.5;color:#1e3a8a}
+footer{text-align:center;padding:0 20px 24px;color:var(--muted);font-size:12px}
+@media(min-width:700px){main{grid-template-columns:1fr 1fr;align-items:start}main .preview-card{position:sticky;top:12px}}
+</style>
+</head>
+<body>
+<header><h1>Text QR Studio</h1><p>Create a QR code with a bold tag name. Export it for sharing or printing.</p></header>
+<main>
+<section class="card">
+<h2>1. Your content</h2>
+<label for="payload">Text encoded in the QR code</label>
+<textarea id="payload" placeholder="Type a URL, Wi-Fi details, contact info, or any plain text">https://example.com</textarea>
+<label for="tag">Label / tag name shown below the QR</label>
+<input id="tag" type="text" maxlength="120" placeholder="e.g. OFFICE WIFI" value="MY QR TAG">
+<label for="font">Label font</label>
+<select id="font">
+<option value="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">System / Sans-serif</option>
+<option value="Arial,sans-serif">Arial</option>
+<option value="Georgia,serif">Georgia</option>
+<option value="'Courier New',monospace">Courier New</option>
+<option value="Impact,sans-serif">Impact</option>
+</select>
+<div class="row">
+<div><label for="fontSize">Label size: <span id="fontSizeVal">22</span> px</label><input id="fontSize" type="range" min="12" max="42" value="22"></div>
+<div><label for="qrSize">QR size: <span id="qrSizeVal">240</span> px</label><input id="qrSize" type="range" min="160" max="360" step="10" value="240"></div>
+</div>
+<label>QR and background colors</label>
+<div class="colors">
+<div class="colorfield"><input type="color" id="qrColor" value="#111827"><span>QR code color</span></div>
+<div class="colorfield"><input type="color" id="bgColor" value="#ffffff"><span>Background color</span></div>
+</div>
+<div class="check"><input type="checkbox" id="bold" checked><label for="bold">Bold label</label></div>
+<div class="check"><input type="checkbox" id="includeText" checked><label for="includeText">Include tag label in exported image</label></div>
+<p class="status" id="libStatus">Loading QR engine…</p>
+</section>
+<section class="card preview-card">
+<h2>2. Preview and export</h2>
+<div class="preview-wrap">
+<div class="preview" id="preview" style="background:#ffffff">
+<div id="qr"><span class="status">Preparing QR code…</span></div>
+<div id="tagPreview">MY QR TAG</div>
+</div>
+</div>
+<div class="actions">
+<button class="primary" id="pngBtn">Download PNG</button>
+<button id="jpgBtn">Download JPEG</button>
+<button id="svgBtn">Download SVG</button>
+<button id="pdfBtn">Save as PDF</button>
+<button class="full" id="shareBtn">Share image / Save to Photos</button>
+<button class="full" id="copyBtn">Copy encoded text</button>
+</div>
+<p class="status" id="status" aria-live="polite">Ready when the QR engine loads.</p>
+<div class="notice" style="margin-top:12px"><b>iPhone tip:</b> If a download opens as a preview, tap Share, then choose <b>Save to Files</b> or <b>Save Image</b> where available. For PDF, use the iOS print sheet and expand the preview if needed.</div>
+</section>
+<section class="card full">
+<h2>Offline note</h2>
+<p class="status">On first launch, this page loads the QR engine from a public CDN and stores a copy in browser storage for later use. Open it once while online before relying on offline use. Safari may restrict storage for local HTML files; for the most dependable offline experience, host this file and its QR library on an HTTPS site and add that site to your Home Screen.</p>
+</section>
+</main>
+<footer>Text QR Studio · QR codes store your text locally in the browser after the QR engine is available.</footer>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const payload=$('payload'),tag=$('tag'),font=$('font'),fontSize=$('fontSize'),qrSize=$('qrSize'),qrColor=$('qrColor'),bgColor=$('bgColor');
+let qrReady=false,renderTimer=null;
+function setStatus(t){$('status').textContent=t}
+function loadEngine(){
+ const cached=(()=>{try{return localStorage.getItem('textQrStudioQRCodeJS')}catch(e){return null}})();
+ if(cached){try{const s=document.createElement('script');s.textContent=cached;document.head.appendChild(s);if(window.QRCode){engineLoaded();return}}catch(e){}}
+ const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+ s.onload=async()=>{try{const r=await fetch(s.src);if(r.ok){const code=await r.text();try{localStorage.setItem('textQrStudioQRCodeJS',code)}catch(e){}}}catch(e){}engineLoaded()};
+ s.onerror=()=>{$('libStatus').textContent='QR engine could not load. Connect to the internet and reload this page.';setStatus('Connect to the internet for the first setup, then reload.');};
+ document.head.appendChild(s);
+}
+function engineLoaded(){qrReady=true;$('libStatus').textContent='QR engine ready. You can now create and export QR codes.';render()}
+function safeName(s){return (s||'qr-code').trim().replace(/[^a-z0-9-_]+/gi,'_').replace(/^_+|_+$/g,'').slice(0,60)||'qr-code'}
+function render(){
+ if(!qrReady)return;
+ const text=payload.value;
+ $('qr').innerHTML='';
+ const size=Number(qrSize.value);
+ if(!text){$('qr').innerHTML='<span class="status">Enter text to generate a QR code.</span>';return}
+ try{
+   const host=document.createElement('div');host.style.width=size+'px';host.style.height=size+'px';$('qr').appendChild(host);
+   new QRCode(host,{text:text,width:size,height:size,colorDark:qrColor.value,colorLight:bgColor.value,correctLevel:QRCode.CorrectLevel.M});
+   const preview=$('preview');preview.style.background=bgColor.value;
+   $('tagPreview').textContent=tag.value||'';$('tagPreview').style.fontFamily=font.value;
+   $('tagPreview').style.fontSize=fontSize.value+'px';$('tagPreview').style.fontWeight=$('bold').checked?'800':'500';
+   $('fontSizeVal').textContent=fontSize.value;$('qrSizeVal').textContent=size;
+   setStatus('QR code updated.');
+ }catch(e){setStatus('Could not generate this QR code. Try shorter text.');}
+}
+function debouncedRender(){clearTimeout(renderTimer);renderTimer=setTimeout(render,120)}
+function getQrCanvas(){
+ const host=$('qr');const canv=host.querySelector('canvas');
+ if(canv)return canv;
+ const img=host.querySelector('img');
+ if(img){const c=document.createElement('canvas');c.width=img.naturalWidth||Number(qrSize.value);c.height=img.naturalHeight||Number(qrSize.value);const x=c.getContext('2d');x.fillStyle=bgColor.value;x.fillRect(0,0,c.width,c.height);try{x.drawImage(img,0,0,c.width,c.height);return c}catch(e){}}
+ throw new Error('QR image is not ready yet.');
+}
+function makeExportCanvas(){
+ const q=getQrCanvas(),pad=24,include=$('includeText').checked,label=include?(tag.value||''):'';const fs=Number(fontSize.value);
+ const labelHeight=label?Math.ceil(fs*1.5+pad):0;const c=document.createElement('canvas');c.width=q.width+pad*2;c.height=q.height+pad*2+labelHeight;
+ const x=c.getContext('2d');x.fillStyle=bgColor.value;x.fillRect(0,0,c.width,c.height);x.drawImage(q,pad,pad);
+ if(label){x.fillStyle=qrColor.value;x.font=($('bold').checked?'800 ':'500 ')+fs+'px '+font.value;x.textAlign='center';x.textBaseline='middle';x.fillText(label,c.width/2,pad+q.height+labelHeight/2,c.width-pad*2)}
+ return c;
+}
+function downloadBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+function canvasBlob(c,type){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('Could not create file.')),type))}
+async function exportRaster(type,ext){try{const c=makeExportCanvas();const blob=await canvasBlob(c,type);downloadBlob(blob,safeName(tag.value)+'.'+ext);setStatus(ext.toUpperCase()+' export prepared. If Safari opens a preview, use Share to save it.')}catch(e){setStatus(e.message)}}
+function makeSvg(){
+ const q=getQrCanvas(),pad=24,include=$('includeText').checked,label=include?(tag.value||''):'';const fs=Number(fontSize.value),lh=label?Math.ceil(fs*1.5+pad):0,w=q.width+pad*2,h=q.height+pad*2+lh;
+ // SVG embeds the QR as a PNG data URI so the exported SVG remains portable.
+ const png=q.toDataURL('image/png');
+ const escapeXml=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="${bgColor.value}"/><image href="${png}" x="${pad}" y="${pad}" width="${q.width}" height="${q.height}"/>${label?`<text x="${w/2}" y="${pad+q.height+lh/2+fs*.35}" text-anchor="middle" font-family="${escapeXml(font.value.split(',')[0])}" font-size="${fs}" font-weight="${$('bold').checked?'800':'500'}" fill="${qrColor.value}">${escapeXml(label)}</text>`:''}</svg>`;
+}
+function exportSvg(){try{downloadBlob(new Blob([makeSvg()],{type:'image/svg+xml;charset=utf-8'}),safeName(tag.value)+'.svg');setStatus('SVG export prepared.')}catch(e){setStatus(e.message)}}
+async function exportPdf(){
+ try{
+  const c=makeExportCanvas();const data=c.toDataURL('image/jpeg',.98);
+  const w=595,h=Math.round(w*c.height/c.width);
+  const win=window.open('','_blank');
+  if(!win){setStatus('Safari blocked the print window. Use Share image / Save to Photos, or allow pop-ups for this page.');return}
+  win.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeName(tag.value)}</title><style>@page{margin:12mm}body{margin:0;display:flex;justify-content:center;align-items:flex-start}img{width:100%;max-width:${w}px;height:auto} @media screen{body{padding:20px}button{position:fixed;top:10px;right:10px;padding:12px}}</style></head><body><button onclick="window.print()">Print / Save PDF</button><img src="${data}" onload="setTimeout(()=>window.print(),350)"></body></html>`);
+  win.document.close();setStatus('Print sheet opened. In iOS, use the print preview and Share to save as PDF.');
+ }catch(e){setStatus('Could not prepare PDF: '+e.message)}
+}
+async function share(){
+ try{
+  const c=makeExportCanvas(),blob=await canvasBlob(c,'image/png'),file=new File([blob],safeName(tag.value)+'.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:tag.value||'QR Code'});setStatus('Share sheet opened.')}
+  else {downloadBlob(blob,file.name);setStatus('File sharing is unavailable here, so a PNG download was started. Use Share in Safari to save it.')}
+ }catch(e){if(e.name!=='AbortError')setStatus('Sharing failed or was cancelled. Try Download PNG.')}
+}
+payload.addEventListener('input',debouncedRender);tag.addEventListener('input',debouncedRender);[font,fontSize,qrSize,qrColor,bgColor,$('bold'),$('includeText')].forEach(el=>el.addEventListener('input',debouncedRender));
+$('pngBtn').addEventListener('click',()=>exportRaster('image/png','png'));
+$('jpgBtn').addEventListener('click',()=>exportRaster('image/jpeg','jpg'));
+$('svgBtn').addEventListener('click',exportSvg);$('pdfBtn').addEventListener('click',exportPdf);$('shareBtn').addEventListener('click',share);
+$('copyBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(payload.value);setStatus('Encoded text copied.')}catch(e){payload.focus();payload.select();setStatus('Text selected. Use Copy from the iOS selection menu.')}});
+loadEngine();
+})();
+</script>
+</body></html>
